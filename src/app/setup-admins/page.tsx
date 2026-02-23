@@ -21,7 +21,7 @@ export default function SetupAdminsPage() {
       let createdCount = 0;
       try {
         // Attempt to create Breno
-        await signup("Breno", "breno@oficina.com", "coelho", true);
+        await signup("Breno", "breno@oficina.com", "Coelho", true);
         createdCount++;
       } catch (e: any) {
         if (e.code !== 'auth/email-already-in-use') throw e; // Rethrow unexpected errors
@@ -30,7 +30,7 @@ export default function SetupAdminsPage() {
 
       try {
         // Attempt to create Gi
-        await signup("Gi", "gi@oficina.com", "coelho", true);
+        await signup("Gi", "gi@oficina.com", "Coelho", true);
         createdCount++;
       } catch (e: any) {
         if (e.code !== 'auth/email-already-in-use') throw e; // Rethrow unexpected errors
