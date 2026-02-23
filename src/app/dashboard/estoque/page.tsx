@@ -72,6 +72,7 @@ export default function EstoquePage() {
       description: "",
       sku: "",
       price: 0,
+      costPrice: 0,
       stockQuantity: 0,
       minStockQuantity: 0,
     },
@@ -135,14 +136,23 @@ export default function EstoquePage() {
                   <Label htmlFor="sku">SKU / Código</Label>
                   <Input id="sku" {...form.register("sku")} />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="costPrice">Preço de Custo (R$)</Label>
+                    <Input id="costPrice" type="number" step="0.01" {...form.register("costPrice", { valueAsNumber: true })} />
+                    {form.formState.errors.costPrice && (
+                      <p className="text-sm text-destructive">{form.formState.errors.costPrice.message}</p>
+                    )}
+                  </div>
                    <div className="space-y-2">
-                    <Label htmlFor="price">Preço (R$)</Label>
+                    <Label htmlFor="price">Preço de Venda (R$)</Label>
                     <Input id="price" type="number" step="0.01" {...form.register("price", { valueAsNumber: true })} />
                      {form.formState.errors.price && (
                       <p className="text-sm text-destructive">{form.formState.errors.price.message}</p>
                     )}
                   </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="stockQuantity">Qtd. em Estoque</Label>
                     <Input id="stockQuantity" type="number" {...form.register("stockQuantity", { valueAsNumber: true })} />
@@ -172,7 +182,8 @@ export default function EstoquePage() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>SKU</TableHead>
-                <TableHead className="text-right">Preço</TableHead>
+                <TableHead className="text-right">Custo</TableHead>
+                <TableHead className="text-right">Venda</TableHead>
                 <TableHead className="text-right">Qtd. em Estoque</TableHead>
                 <TableHead>
                   <span className="sr-only">Ações</span>
@@ -182,7 +193,7 @@ export default function EstoquePage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     Carregando...
                   </TableCell>
                 </TableRow>
@@ -191,6 +202,9 @@ export default function EstoquePage() {
                   <TableRow key={part.id}>
                     <TableCell className="font-medium">{part.name}</TableCell>
                     <TableCell>{part.sku}</TableCell>
+                     <TableCell className="text-right">
+                      {part.costPrice.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </TableCell>
                     <TableCell className="text-right">
                       {part.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     </TableCell>
@@ -220,7 +234,7 @@ export default function EstoquePage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     Nenhuma peça em estoque.
                   </TableCell>
                 </TableRow>

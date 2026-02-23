@@ -72,6 +72,10 @@ export default function NovaOrdemPage() {
     return servicesTotal + partsTotal;
   }, [serviceLineItems, partLineItems]);
 
+  const totalCost = useMemo(() => {
+    return partLineItems.reduce((acc, item) => acc + (item.costPrice * item.quantity), 0);
+  }, [partLineItems]);
+
   const handleAddItem = () => {
     if (!selectedItem) return;
     const item = availableItems.find(i => i.id === selectedItem);
@@ -86,7 +90,7 @@ export default function NovaOrdemPage() {
       if (existingPart) {
         setPartLineItems(prev => prev.map(pli => pli.id === item.id ? { ...pli, quantity: pli.quantity + partQuantity } : pli));
       } else {
-        setPartLineItems(prev => [...prev, { id: item.id, name: item.name, price: item.price, quantity: partQuantity }]);
+        setPartLineItems(prev => [...prev, { id: item.id, name: item.name, price: item.price, costPrice: (item as Part).costPrice, quantity: partQuantity }]);
       }
     }
     setSelectedItem(undefined);
@@ -131,6 +135,7 @@ export default function NovaOrdemPage() {
       serviceLineItems,
       partLineItems,
       totalAmount,
+      totalCost,
       paymentStatus: 'pending',
     });
 

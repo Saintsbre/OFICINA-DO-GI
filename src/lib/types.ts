@@ -22,6 +22,7 @@ export type Part = {
   description: string;
   sku: string;
   price: number;
+  costPrice: number;
   stockQuantity: number;
   minStockQuantity: number;
 }
@@ -56,6 +57,7 @@ export type PartLineItem = {
   id: string;
   name: string;
   price: number;
+  costPrice: number;
   quantity: number;
 }
 
@@ -73,6 +75,7 @@ export type ServiceOrder = {
   serviceLineItems: ServiceLineItem[];
   partLineItems: PartLineItem[];
   totalAmount: number;
+  totalCost: number;
   paymentStatus: 'pending' | 'paid' | 'partially paid';
   notes?: string;
 }

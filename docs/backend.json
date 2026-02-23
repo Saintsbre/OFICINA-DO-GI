@@ -97,6 +97,10 @@
           "type": "number",
           "description": "The standard selling price for this part."
         },
+        "costPrice": {
+          "type": "number",
+          "description": "The cost of the part for the workshop."
+        },
         "stockQuantity": {
           "type": "number",
           "description": "The current quantity of this part available in stock."
@@ -112,6 +116,7 @@
         "description",
         "sku",
         "price",
+        "costPrice",
         "stockQuantity",
         "minStockQuantity"
       ]
@@ -254,6 +259,10 @@
           "type": "number",
           "description": "The calculated total amount for the entire service order, including all services and parts."
         },
+        "totalCost": {
+          "type": "number",
+          "description": "The calculated total cost of all parts used in the service order."
+        },
         "paymentStatus": {
           "type": "string",
           "description": "The payment status of the service order (e.g., 'pending', 'paid', 'partially paid')."
@@ -273,6 +282,7 @@
         "serviceLineItems",
         "partLineItems",
         "totalAmount",
+        "totalCost",
         "paymentStatus"
       ]
     },

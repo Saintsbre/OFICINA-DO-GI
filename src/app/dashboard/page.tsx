@@ -75,20 +75,20 @@ export default function DashboardPage() {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const monthlyRevenue = serviceOrders
+    const monthlyProfit = serviceOrders
       ?.filter(order => 
         order.status === 'completed' &&
         order.completionDate &&
         (order.completionDate as unknown as Timestamp).toDate() >= startOfMonth
       )
-      .reduce((acc, order) => acc + order.totalAmount, 0) || 0;
+      .reduce((acc, order) => acc + (order.totalAmount - (order.totalCost || 0)), 0) || 0;
       
     const openOrders = serviceOrders?.filter(order => order.status === 'open' || order.status === 'in progress').length || 0;
     
     const customerCount = customers?.length || 0;
 
     return {
-      monthlyRevenue,
+      monthlyProfit,
       openOrders,
       customerCount,
     }
@@ -106,10 +106,10 @@ export default function DashboardPage() {
       />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          title="Lucro do Mês (Bruto)"
-          value={stats.monthlyRevenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+          title="Lucro Líquido do Mês"
+          value={stats.monthlyProfit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-          description="Soma das OS concluídas este mês"
+          description="Receita de OS concluídas (venda - custo)"
           isLoading={isLoading}
         />
         <StatCard
