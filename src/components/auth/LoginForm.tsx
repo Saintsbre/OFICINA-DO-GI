@@ -39,8 +39,12 @@ export function LoginForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // Anexa o domínio ao nome de usuário para criar um e-mail válido para o Firebase Auth.
-    const email = `${values.username.toLowerCase()}@oficina.com`;
+    
+    let email = values.username.toLowerCase();
+    if (!email.includes('@')) {
+      email = `${email}@oficina.com`;
+    }
+    
     try {
       await login(email, values.password);
       router.push("/dashboard");
