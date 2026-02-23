@@ -49,79 +49,78 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useFirebase, useCollection, addDocumentNonBlocking, deleteDocumentNonBlocking, useMemoFirebase } from "@/firebase";
-import { partSchema } from "@/lib/schemas";
-import type { Part } from "@/lib/types";
+import { serviceSchema } from "@/lib/schemas";
+import type { Service } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
-type PartFormData = z.infer<typeof partSchema>;
+type ServiceFormData = z.infer<typeof serviceSchema>;
 
-export default function EstoquePage() {
+export default function ServicosPage() {
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
-  const [partToDelete, setPartToDelete] = React.useState<Part | null>(null);
+  const [serviceToDelete, setServiceToDelete] = React.useState<Service | null>(null);
 
-  const partsRef = useMemoFirebase(() => collection(firestore, "parts"), [firestore]);
-  const { data: parts, isLoading } = useCollection<Part>(partsRef);
+  const servicesRef = useMemoFirebase(() => collection(firestore, "services"), [firestore]);
+  const { data: services, isLoading } = useCollection<Service>(servicesRef);
 
-  const form = useForm<PartFormData>({
-    resolver: zodResolver(partSchema),
+  const form = useForm<ServiceFormData>({
+    resolver: zodResolver(serviceSchema),
     defaultValues: {
       name: "",
       description: "",
-      sku: "",
       price: 0,
-      stockQuantity: 0,
-      minStockQuantity: 0,
+      isActive: true,
     },
   });
 
-  const onSubmit = async (data: PartFormData) => {
-    addDocumentNonBlocking(partsRef, data);
+  const onSubmit = async (data: ServiceFormData) => {
+    addDocumentNonBlocking(servicesRef, data);
 
     toast({
       title: "Sucesso!",
-      description: `Peça "${data.name}" adicionada ao estoque.`,
+      description: `Serviço "${data.name}" adicionado.`,
     });
 
     form.reset();
     setOpen(false);
   };
 
-  const handleDeletePart = () => {
-    if (!partToDelete) return;
-    const partDocRef = doc(firestore, "parts", partToDelete.id);
-    deleteDocumentNonBlocking(partDocRef);
+  const handleDeleteService = () => {
+    if (!serviceToDelete) return;
+    const serviceDocRef = doc(firestore, "services", serviceToDelete.id);
+    deleteDocumentNonBlocking(serviceDocRef);
     toast({
-      title: "Peça excluída",
-      description: `A peça "${partToDelete.name}" foi excluída com sucesso.`,
+      title: "Serviço excluído",
+      description: `O serviço "${serviceToDelete.name}" foi excluído com sucesso.`,
     });
-    setPartToDelete(null);
+    setServiceToDelete(null);
   };
 
   return (
     <div>
       <PageHeader
-        title="Controle de Estoque"
-        description="Gerencie as peças e produtos da sua oficina."
+        title="Gestão de Serviços"
+        description="Adicione, edite e visualize os serviços da sua oficina."
         action={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button>
-                <PlusCircle className="mr-2 h-4 w-4" /> Nova Peça
+                <PlusCircle className="mr-2 h-4 w-4" /> Novo Serviço
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Nova Peça</DialogTitle>
+                <DialogTitle>Novo Serviço</DialogTitle>
                 <DialogDescription>
-                  Preencha os dados da nova peça para o estoque.
+                  Preencha os dados do novo serviço.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome da Peça</Label>
+                  <Label htmlFor="name">Nome do Serviço</Label>
                   <Input id="name" {...form.register("name")} />
                   {form.formState.errors.name && (
                     <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
@@ -132,32 +131,19 @@ export default function EstoquePage() {
                   <Textarea id="description" {...form.register("description")} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="sku">SKU / Código</Label>
-                  <Input id="sku" {...form.register("sku")} />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                   <div className="space-y-2">
                     <Label htmlFor="price">Preço (R$)</Label>
                     <Input id="price" type="number" step="0.01" {...form.register("price", { valueAsNumber: true })} />
                      {form.formState.errors.price && (
                       <p className="text-sm text-destructive">{form.formState.errors.price.message}</p>
                     )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="stockQuantity">Qtd. em Estoque</Label>
-                    <Input id="stockQuantity" type="number" {...form.register("stockQuantity", { valueAsNumber: true })} />
-                     {form.formState.errors.stockQuantity && (
-                      <p className="text-sm text-destructive">{form.formState.errors.stockQuantity.message}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="minStockQuantity">Qtd. Mínima</Label>
-                    <Input id="minStockQuantity" type="number" {...form.register("minStockQuantity", { valueAsNumber: true })} />
-                  </div>
+                </div>
+                 <div className="flex items-center space-x-2">
+                    <Checkbox id="isActive" {...form.register("isActive")} defaultChecked={true} />
+                    <Label htmlFor="isActive">Serviço ativo</Label>
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? "Salvando..." : "Salvar Peça"}
+                    {form.formState.isSubmitting ? "Salvando..." : "Salvar Serviço"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -171,9 +157,8 @@ export default function EstoquePage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>SKU</TableHead>
+                <TableHead>Descrição</TableHead>
                 <TableHead className="text-right">Preço</TableHead>
-                <TableHead className="text-right">Qtd. em Estoque</TableHead>
                 <TableHead>
                   <span className="sr-only">Ações</span>
                 </TableHead>
@@ -182,19 +167,18 @@ export default function EstoquePage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     Carregando...
                   </TableCell>
                 </TableRow>
-              ) : parts && parts.length > 0 ? (
-                parts.map((part) => (
-                  <TableRow key={part.id}>
-                    <TableCell className="font-medium">{part.name}</TableCell>
-                    <TableCell>{part.sku}</TableCell>
+              ) : services && services.length > 0 ? (
+                services.map((service) => (
+                  <TableRow key={service.id}>
+                    <TableCell className="font-medium">{service.name}</TableCell>
+                    <TableCell>{service.description}</TableCell>
                     <TableCell className="text-right">
-                      {part.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {service.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     </TableCell>
-                    <TableCell className="text-right">{part.stockQuantity}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -208,7 +192,7 @@ export default function EstoquePage() {
                           <DropdownMenuItem disabled>Editar</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <AlertDialogTrigger asChild>
-                            <DropdownMenuItem onSelect={() => setPartToDelete(part)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                            <DropdownMenuItem onSelect={() => setServiceToDelete(service)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />
                               Excluir
                             </DropdownMenuItem>
@@ -220,8 +204,8 @@ export default function EstoquePage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
-                    Nenhuma peça em estoque.
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    Nenhum serviço cadastrado.
                   </TableCell>
                 </TableRow>
               )}
@@ -230,17 +214,17 @@ export default function EstoquePage() {
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!partToDelete} onOpenChange={(isOpen) => !isOpen && setPartToDelete(null)}>
+      <AlertDialog open={!!serviceToDelete} onOpenChange={(isOpen) => !isOpen && setServiceToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              Essa ação não pode ser desfeita. Isso irá excluir permanentemente a peça &quot;{partToDelete?.name}&quot;.
+              Essa ação não pode ser desfeita. Isso irá excluir permanentemente o serviço &quot;{serviceToDelete?.name}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeletePart} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteService} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

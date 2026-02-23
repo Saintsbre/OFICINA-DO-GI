@@ -2,34 +2,34 @@
 
 import { Wrench } from "lucide-react";
 import { useEffect } from "react";
+import { useFirebase, useDoc, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
+import type { ServiceOrder } from "@/lib/types";
 
 export default function PrintOrdemPage({ params }: { params: { id: string } }) {
   
-  useEffect(() => {
-    // This will run only on the client side after the component mounts
-    setTimeout(() => {
-        window.print();
-    }, 500); // Small delay to ensure content is rendered
-  }, []);
+  const { firestore } = useFirebase();
+  const orderRef = useMemoFirebase(() => doc(firestore, "serviceOrders", params.id), [firestore, params.id]);
+  const { data: order, isLoading } = useDoc<ServiceOrder>(orderRef);
   
-  // Mock data - in a real app, you would fetch this based on params.id
-  const order = {
-    id: params.id,
-    numero: '00123',
-    cliente: 'João da Silva',
-    telefone: '(11) 98765-4321',
-    veiculo: 'Toyota Corolla',
-    placa: 'ABC-1234',
-    dataCriacao: '15 de Julho de 2024',
-    items: [
-      { id: 1, tipo: 'Serviço', nome: 'Troca de óleo do motor', preco: 150.00 },
-      { id: 2, tipo: 'Peça', nome: 'Filtro de óleo', preco: 45.50 },
-      { id: 3, tipo: 'Peça', nome: 'Óleo 5W30 Sintético (4L)', preco: 180.00 },
-      { id: 4, tipo: 'Serviço', nome: 'Alinhamento e Balanceamento', preco: 120.00 },
-    ],
-  };
-
-  const total = order.items.reduce((acc, item) => acc + item.preco, 0);
+  useEffect(() => {
+    if (order) {
+      setTimeout(() => {
+          window.print();
+      }, 500); 
+    }
+  }, [order]);
+  
+  if (isLoading || !order) {
+    return (
+        <div className="flex h-screen items-center justify-center bg-card text-card-foreground">
+             <div className="text-center">
+                <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
+                <h1 className="mt-4 text-xl font-semibold">Carregando dados da OS...</h1>
+             </div>
+        </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-card text-card-foreground print:bg-white print:text-black">
@@ -49,25 +49,30 @@ export default function PrintOrdemPage({ params }: { params: { id: string } }) {
             </div>
         </div>
         <div className="text-right">
-            <p className="font-semibold">OS #{order.numero}</p>
-            <p className="text-sm">{order.dataCriacao}</p>
+            <p className="font-semibold">OS #{order.orderNumber}</p>
+            <p className="text-sm">{new Date(order.issueDate.seconds * 1000).toLocaleDateString('pt-BR')}</p>
         </div>
       </header>
 
       <section className="my-6 grid grid-cols-2 gap-4">
         <div>
           <h2 className="font-semibold mb-2">Cliente</h2>
-          <p>{order.cliente}</p>
-          <p>{order.telefone}</p>
+          <p>{order.customerName}</p>
         </div>
         <div>
           <h2 className="font-semibold mb-2">Veículo</h2>
-          <p>{order.veiculo}</p>
-          <p>{order.placa}</p>
+          <p>{order.vehicleModel}</p>
+          <p>Placa: {order.vehiclePlate}</p>
         </div>
       </section>
 
       <section className="my-6">
+        <h3 className="font-semibold mb-2">Problema Relatado</h3>
+        <p className="text-sm">{order.notes || "Nenhum problema relatado."}</p>
+      </section>
+
+      <section className="my-6">
+        <h3 className="font-semibold mb-2">Itens da Ordem de Serviço</h3>
         <table className="w-full text-left">
           <thead className="bg-muted print:bg-gray-200">
             <tr>
@@ -77,12 +82,19 @@ export default function PrintOrdemPage({ params }: { params: { id: string } }) {
             </tr>
           </thead>
           <tbody>
-            {order.items.map(item => (
-              <tr key={item.id} className="border-b">
-                <td className="p-2">{item.nome}</td>
-                <td className="p-2">{item.tipo}</td>
-                <td className="p-2 text-right">R$ {item.preco.toFixed(2)}</td>
-              </tr>
+             {order.serviceLineItems.map((item, index) => (
+                <tr key={`service-${index}`} className="border-b">
+                    <td className="p-2">{item.name}</td>
+                    <td className="p-2">Serviço</td>
+                    <td className="p-2 text-right">{item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                </tr>
+                ))}
+             {order.partLineItems.map((item, index) => (
+                <tr key={`part-${index}`} className="border-b">
+                    <td className="p-2">{item.quantity}x {item.name}</td>
+                    <td className="p-2">Peça</td>
+                    <td className="p-2 text-right">{(item.price * item.quantity).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                </tr>
             ))}
           </tbody>
         </table>
@@ -92,7 +104,7 @@ export default function PrintOrdemPage({ params }: { params: { id: string } }) {
         <div className="w-full max-w-xs space-y-2">
             <div className="flex justify-between text-lg font-bold border-t pt-2">
                 <span>Total</span>
-                <span>R$ {total.toFixed(2)}</span>
+                <span>{order.totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
             </div>
         </div>
       </section>

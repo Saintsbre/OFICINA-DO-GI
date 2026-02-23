@@ -4,8 +4,8 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { PlusCircle, MoreHorizontal } from "lucide-react";
-import { collection, serverTimestamp } from "firebase/firestore";
+import { PlusCircle, MoreHorizontal, Trash2 } from "lucide-react";
+import { collection, doc } from "firebase/firestore";
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,22 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -36,7 +48,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useFirebase, useCollection, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
+import { useFirebase, useCollection, addDocumentNonBlocking, deleteDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { customerSchema } from "@/lib/schemas";
 import type { Customer } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +59,7 @@ export default function ClientesPage() {
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
+  const [customerToDelete, setCustomerToDelete] = React.useState<Customer | null>(null);
 
   const customersRef = useMemoFirebase(() => collection(firestore, "customers"), [firestore]);
   const { data: customers, isLoading } = useCollection<Customer>(customersRef);
@@ -62,10 +75,7 @@ export default function ClientesPage() {
   });
 
   const onSubmit = async (data: CustomerFormData) => {
-    addDocumentNonBlocking(customersRef, {
-      ...data,
-      createdAt: serverTimestamp(),
-    });
+    addDocumentNonBlocking(customersRef, data);
     
     toast({
       title: "Sucesso!",
@@ -74,6 +84,17 @@ export default function ClientesPage() {
 
     form.reset();
     setOpen(false);
+  };
+
+  const handleDeleteCustomer = () => {
+    if (!customerToDelete) return;
+    const customerDocRef = doc(firestore, "customers", customerToDelete.id);
+    deleteDocumentNonBlocking(customerDocRef);
+    toast({
+      title: "Cliente excluído",
+      description: `O cliente "${customerToDelete.name}" foi excluído com sucesso.`,
+    });
+    setCustomerToDelete(null);
   };
 
   return (
@@ -106,6 +127,9 @@ export default function ClientesPage() {
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" {...form.register("email")} />
+                  {form.formState.errors.email && (
+                    <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone</Label>
@@ -161,8 +185,14 @@ export default function ClientesPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem>Editar</DropdownMenuItem>
-                          <DropdownMenuItem>Excluir</DropdownMenuItem>
+                          <DropdownMenuItem disabled>Editar</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                           <AlertDialogTrigger asChild>
+                            <DropdownMenuItem onSelect={() => setCustomerToDelete(customer)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -179,6 +209,21 @@ export default function ClientesPage() {
           </Table>
         </CardContent>
       </Card>
+      
+      <AlertDialog open={!!customerToDelete} onOpenChange={(isOpen) => !isOpen && setCustomerToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação não pode ser desfeita. Isso irá excluir permanentemente o cliente &quot;{customerToDelete?.name}&quot;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCustomer} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

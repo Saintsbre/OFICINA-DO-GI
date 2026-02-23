@@ -11,6 +11,7 @@ import {
   Settings,
   Users,
   Wrench,
+  ListChecks,
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/use-auth";
@@ -148,6 +149,9 @@ export default function DashboardLayout({
             </NavItem>
             <NavItem href="/dashboard/clientes" icon={<Users />}>
               Clientes
+            </NavItem>
+             <NavItem href="/dashboard/servicos" icon={<ListChecks />}>
+              Serviços
             </NavItem>
             <NavItem href="/dashboard/estoque" icon={<Package />}>
               Estoque

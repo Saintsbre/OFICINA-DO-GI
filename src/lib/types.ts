@@ -46,16 +46,32 @@ export type Vehicle = {
 
 export type ServiceOrderStatus = 'open' | 'in progress' | 'completed' | 'cancelled';
 
+export type ServiceLineItem = {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export type PartLineItem = {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 export type ServiceOrder = {
   id: string;
+  orderNumber: string;
   customerId: string;
-  vehicleId: string;
+  customerName: string; // Denormalized
+  vehiclePlate: string;
+  vehicleModel: string;
   mechanicId: string;
   issueDate: FieldValue;
   completionDate?: FieldValue;
   status: ServiceOrderStatus;
-  serviceLineItems: any[]; // Define more specific type later
-  partLineItems: any[]; // Define more specific type later
+  serviceLineItems: ServiceLineItem[];
+  partLineItems: PartLineItem[];
   totalAmount: number;
   paymentStatus: 'pending' | 'paid' | 'partially paid';
   notes?: string;
