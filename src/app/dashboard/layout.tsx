@@ -97,14 +97,12 @@ const NavItem = ({
 
   return (
     <SidebarMenuItem>
-      <Link href={href} passHref legacyBehavior>
-        <SidebarMenuButton asChild isActive={isActive} tooltip={{ children }}>
-          <a>
-            {icon}
-            <span className="truncate">{children}</span>
-          </a>
-        </SidebarMenuButton>
-      </Link>
+      <SidebarMenuButton asChild isActive={isActive} tooltip={{ children }}>
+        <Link href={href}>
+          {icon}
+          <span className="truncate">{children}</span>
+        </Link>
+      </SidebarMenuButton>
     </SidebarMenuItem>
   );
 };
