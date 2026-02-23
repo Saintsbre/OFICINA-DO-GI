@@ -18,8 +18,9 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useState } from "react";
 
+// O usuário irá inserir apenas um nome, então validamos para uma string simples.
 const formSchema = z.object({
-  email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
+  username: z.string().min(1, { message: "Por favor, insira seu nome de usuário." }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
 });
 
@@ -31,15 +32,17 @@ export function LoginForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    // Anexa o domínio ao nome de usuário para criar um e-mail válido para o Firebase Auth.
+    const email = `${values.username.toLowerCase()}@oficina.com`;
     try {
-      await login(values.email, values.password);
+      await login(email, values.password);
       router.push("/dashboard");
     } catch (error) {
       console.error("Login failed:", error);
@@ -53,12 +56,12 @@ export function LoginForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
-          name="email"
+          name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>Usuário</FormLabel>
               <FormControl>
-                <Input placeholder="seu@email.com" {...field} />
+                <Input placeholder="Ex: Gi" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

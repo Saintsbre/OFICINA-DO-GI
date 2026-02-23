@@ -55,7 +55,7 @@ export default function SetupAdminsPage() {
         <CardHeader>
           <CardTitle>Configurar Administradores</CardTitle>
           <CardDescription>
-            Clique no botão abaixo para criar os usuários administradores. Use os logins `breno@oficina.com` e `gi@oficina.com` com a senha `Coelho`.
+            Clique no botão abaixo para criar os usuários administradores. Use os logins `Breno` ou `Gi` com a senha `Coelho`.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
