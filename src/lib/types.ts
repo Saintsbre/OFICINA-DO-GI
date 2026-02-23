@@ -1,50 +1,72 @@
-export interface Cliente {
+import { FieldValue } from 'firebase/firestore';
+
+export type UserProfile = {
   id: string;
-  nome: string;
-  telefone: string;
+  firebaseAuthUid: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'mechanic';
+}
+
+export type Service = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  isActive: boolean;
+}
+
+export type Part = {
+  id: string;
+  name: string;
+  description: string;
+  sku: string;
+  price: number;
+  stockQuantity: number;
+  minStockQuantity: number;
+}
+
+export type Customer = {
+  id: string;
+  name: string;
   email?: string;
-  veiculos: Veiculo[];
+  phone?: string;
+  address?: string;
 }
 
-export interface Veiculo {
-  placa: string;
-  marca: string;
-  modelo: string;
-}
-
-export interface Peca {
+export type Vehicle = {
   id: string;
-  nome: string;
-  preco: number;
-  quantidade: number;
+  customerId: string;
+  plate: string;
+  brand: string;
+  model: string;
+  year: number;
+  vin?: string;
 }
 
-export interface Servico {
+export type ServiceOrderStatus = 'open' | 'in progress' | 'completed' | 'cancelled';
+
+export type ServiceOrder = {
   id: string;
-  nome: string;
-  preco: number;
+  customerId: string;
+  vehicleId: string;
+  mechanicId: string;
+  issueDate: FieldValue;
+  completionDate?: FieldValue;
+  status: ServiceOrderStatus;
+  serviceLineItems: any[]; // Define more specific type later
+  partLineItems: any[]; // Define more specific type later
+  totalAmount: number;
+  paymentStatus: 'pending' | 'paid' | 'partially paid';
+  notes?: string;
 }
 
-export type OrdemStatus = 'aberta' | 'em andamento' | 'concluída' | 'cancelada';
-
-export interface OrdemServico {
+export type FinancialTransaction = {
   id: string;
-  numero: number;
-  cliente: { id: string; nome: string };
-  veiculo: { placa: string; modelo: string };
-  servicos: Servico[];
-  pecas: Peca[];
-  total: number;
-  status: OrdemStatus;
-  dataCriacao: any; // Use firestore.FieldValue.serverTimestamp()
-  dataConclusao?: any;
-}
-
-export interface Transacao {
-  id: string;
-  tipo: 'entrada' | 'saida';
-  valor: number;
-  descricao: string;
-  data: any; // Use firestore.FieldValue.serverTimestamp()
-  ordemServicoId?: string;
+  type: 'income' | 'expense';
+  description: string;
+  amount: number;
+  date: FieldValue;
+  relatedServiceOrderId?: string;
+  category: string;
 }
