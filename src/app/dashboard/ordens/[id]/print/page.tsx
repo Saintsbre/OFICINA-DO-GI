@@ -50,7 +50,7 @@ export default function PrintOrdemPage({ params }: { params: { id: string } }) {
         </div>
         <div className="text-right">
             <p className="font-semibold">OS #{order.orderNumber}</p>
-            <p className="text-sm">{new Date(order.issueDate.seconds * 1000).toLocaleDateString('pt-BR')}</p>
+            <p className="text-sm">{order.issueDate ? new Date(order.issueDate.seconds * 1000).toLocaleDateString('pt-BR') : ''}</p>
         </div>
       </header>
 

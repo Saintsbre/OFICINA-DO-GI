@@ -161,7 +161,7 @@ export default function OrdemDetalhePage({ params }: { params: { id: string } })
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Data de Criação</span>
-                <span>{new Date(order.issueDate.seconds * 1000).toLocaleDateString('pt-BR')}</span>
+                <span>{order.issueDate ? new Date(order.issueDate.seconds * 1000).toLocaleDateString('pt-BR') : 'Não definida'}</span>
               </div>
               {order.notes && (
                 <div>

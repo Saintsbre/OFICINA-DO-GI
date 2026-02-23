@@ -80,7 +80,7 @@ export default function OrdensPage() {
                     <TableCell className="font-medium">{order.orderNumber}</TableCell>
                     <TableCell>{order.customerName}</TableCell>
                     <TableCell>{order.vehicleModel} ({order.vehiclePlate})</TableCell>
-                    <TableCell>{new Date(order.issueDate.seconds * 1000).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell>{order.issueDate ? new Date(order.issueDate.seconds * 1000).toLocaleDateString('pt-BR') : "Data inválida"}</TableCell>
                     <TableCell>
                         <Badge variant={getStatusVariant(order.status)}>{getStatusLabel(order.status)}</Badge>
                     </TableCell>
