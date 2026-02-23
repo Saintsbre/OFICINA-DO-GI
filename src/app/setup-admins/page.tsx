@@ -1,88 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
 
 export default function SetupAdminsPage() {
   const { signup, logout } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDone, setIsDone] = useState(false);
+  const router = useRouter();
+  const setupInProgress = useRef(false);
 
-  const handleCreateAdmins = async () => {
-    setIsLoading(true);
-    try {
-      // Create Breno
-      await signup("Breno", "breno@oficina.com", "Coelho", true);
-      toast({
-        title: "Usuário Breno criado",
-        description: "O usuário administrador Breno foi criado com sucesso.",
-      });
-      await logout(); // Logout to create the next user
-
-      // Create Gi
-      await signup("Gi", "gi@oficina.com", "Coelho", true);
-      toast({
-        title: "Usuário Gi criado",
-        description: "O usuário administrador Gi foi criado com sucesso.",
-      });
-      await logout(); // Logout after the last creation
-
-      setIsDone(true);
-      toast({
-        title: "Sucesso!",
-        description: "Os usuários administradores foram criados.",
-      });
-    } catch (error: any) {
-      console.error("Failed to create admins:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar administradores",
-        description: error.message || "Ocorreu um problema ao criar os usuários.",
-      });
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (setupInProgress.current || !signup || !logout) {
+      return;
     }
-  };
+    setupInProgress.current = true;
+
+    const setupAdmins = async () => {
+      let createdCount = 0;
+      try {
+        // Attempt to create Breno
+        await signup("Breno", "breno@oficina.com", "Coelho", true);
+        createdCount++;
+      } catch (e: any) {
+        if (e.code !== 'auth/email-already-in-use') throw e; // Rethrow unexpected errors
+      }
+      await logout();
+
+      try {
+        // Attempt to create Gi
+        await signup("Gi", "gi@oficina.com", "Coelho", true);
+        createdCount++;
+      } catch (e: any) {
+        if (e.code !== 'auth/email-already-in-use') throw e; // Rethrow unexpected errors
+      }
+      await logout();
+
+      if (createdCount > 0) {
+        toast({
+          title: "Sucesso!",
+          description: `Foram criados ${createdCount} novo(s) usuário(s) administrador(es).`,
+        });
+      } else {
+        toast({
+          title: "Setup Verificado",
+          description: "Os usuários administradores já existem.",
+        });
+      }
+
+      router.replace("/login");
+    };
+
+    setupAdmins().catch((err) => {
+      console.error("Admin setup failed catastrophically:", err);
+      // The signup function would have already shown a toast.
+      // We still redirect to login so the user isn't stuck.
+      router.replace("/login");
+    });
+  }, [signup, logout, toast, router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Configurar Administradores</CardTitle>
-          <CardDescription>
-            Clique no botão abaixo para criar os usuários administradores. Use os logins `Breno` ou `Gi` com a senha `Coelho`.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {isDone ? (
-            <>
-              <div className="text-center text-green-500 font-bold p-4 bg-green-500/10 rounded-md">
-                Administradores criados com sucesso!
-              </div>
-              <Link href="/login" passHref>
-                <Button className="w-full">Ir para o Login</Button>
-              </Link>
-            </>
-          ) : (
-            <Button
-              onClick={handleCreateAdmins}
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-white border-t-transparent"></div>
-              ) : (
-                "Criar Administradores"
-              )}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+    <div className="flex h-screen w-full items-center justify-center bg-background">
+      <div className="text-center">
+        <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
+        <h1 className="mt-4 text-xl font-semibold">Configurando...</h1>
+        <p className="text-muted-foreground">Verificando e criando usuários administradores. Aguarde.</p>
+      </div>
     </div>
   );
 }

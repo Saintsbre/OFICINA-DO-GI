@@ -73,11 +73,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return userCredential;
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar conta",
-        description: error.message || "Ocorreu um problema ao criar a sua conta.",
-      });
+      if (error.code !== 'auth/email-already-in-use') {
+        toast({
+          variant: "destructive",
+          title: "Erro ao criar conta",
+          description: error.message || "Ocorreu um problema ao criar a sua conta.",
+        });
+      }
       throw error;
     } finally {
       setLoading(false);
