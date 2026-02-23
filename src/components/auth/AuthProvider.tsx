@@ -1,8 +1,18 @@
 "use client";
 
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext, useState } from "react";
 import type { User } from "firebase/auth";
-import { auth, firebase } from "@/lib/firebase";
+import {
+  useFirebase,
+  useUser,
+  setDocumentNonBlocking,
+} from "@/firebase";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
@@ -10,28 +20,21 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<any>;
   logout: () => Promise<void>;
+  signup: (name: string, email: string, pass: string, isAdmin?: boolean) => Promise<any>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { auth, firestore, isUserLoading } = useFirebase();
+  const { user } = useUser();
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const login = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      const userCredential = await auth.signInWithEmailAndPassword(email, pass);
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
       return userCredential;
     } catch (error: any) {
       toast({
@@ -45,10 +48,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signup = async (name: string, email: string, pass: string, isAdmin = false) => {
+    setLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+      const { user } = userCredential;
+
+      // Create user profile
+      const userProfileRef = doc(firestore, "userProfiles", user.uid);
+      const userProfileData = {
+        id: user.uid,
+        firebaseAuthUid: user.uid,
+        name,
+        email: user.email,
+        role: isAdmin ? 'admin' : 'mechanic',
+      };
+      setDocumentNonBlocking(userProfileRef, userProfileData, { merge: true });
+
+      if (isAdmin) {
+        // Create admin role
+        const adminRoleRef = doc(firestore, "admin_roles", user.uid);
+        setDocumentNonBlocking(adminRoleRef, { createdAt: new Date() }, { merge: true });
+      }
+
+      return userCredential;
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao criar conta",
+        description: error.message || "Ocorreu um problema ao criar a sua conta.",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     setLoading(true);
     try {
-      await auth.signOut();
+      await signOut(auth);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -62,9 +101,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     user,
-    loading,
+    loading: isUserLoading || loading,
     login,
     logout,
+    signup,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
