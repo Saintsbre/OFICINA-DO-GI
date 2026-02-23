@@ -1,0 +1,208 @@
+/**
+ * This ruleset enforces a strict role-based access control (RBAC) model for a vehicle workshop management system.
+ *
+ * Core Philosophy:
+ * Access is divided into two primary roles: 'Admins' and general authenticated 'Users' (e.g., mechanics).
+ * Admins have full read/write access to all data, including sensitive financial records and user role management.
+ * Authenticated users can read master data (services, parts) and manage day-to-day operational data (customers, vehicles, service orders).
+ * All access requires user authentication; there is no publicly readable or writable data.
+ *
+ * Data Structure:
+ * The data is organized into a series of flat, top-level collections (e.g., /customers, /serviceOrders, /parts).
+ * This structure simplifies security rules by grouping documents with similar access patterns together.
+ *
+ * Key Security Decisions:
+ * - Admin Role Management: Administrator status is determined by the existence of a document in the `/admin_roles/{userId}` collection. This database-backed access control (DBAC) is secure, performant, and avoids reliance on custom claims.
+ * - Operational Data Access: Authenticated users are trusted to create and update core operational records like customers and service orders, but deletion of historical or critical data is restricted to admins to prevent accidental data loss.
+ * - User Profile Security: Users can create and read their own profiles. However, only admins can modify a user's role to prevent privilege escalation. Listing all users is also an admin-only privilege.
+ * - Default Security Posture: Access is denied by default. Rules explicitly grant permissions on a per-collection basis.
+ *
+ * Denormalization for Authorization:
+ * The rules rely on denormalized fields within documents for authorization checks to avoid slow and costly `get()` calls. For example, a `serviceOrder` document contains a `mechanicId`, which can be validated directly during creation without looking up related documents.
+ *
+ * Structural Segregation:
+ * The use of a dedicated `/admin_roles` collection is a prime example of structural segregation. It isolates the critical authorization logic from general user data, making the rules for both collections simpler and more secure.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------------------------------
+    // Helper Functions
+    // --------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the user is an administrator.
+     * Admin status is granted if a document with the user's UID exists in the /admin_roles collection.
+     */
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/admin_roles/$(request.auth.uid));
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     * Used to enforce ownership of resources.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * Verifies that a user profile's internal ID matches its path ID on creation.
+     */
+    function userProfileDataIsConsistent() {
+      return request.resource.data.firebaseAuthUid == request.auth.uid;
+    }
+
+    /**
+     * Prevents a user from changing their own role.
+     * Role changes are only allowed if the request is made by an admin.
+     */
+    function roleIsUnchangedOrAdmin() {
+      return isAdmin() || request.resource.data.role == resource.data.role;
+    }
+
+    /**
+     * Ensures the creator of a service order is correctly identified as the mechanic.
+     */
+    function creatorIsMechanic() {
+      return request.resource.data.mechanicId == request.auth.uid;
+    }
+
+    /**
+     * User profiles store user-specific information, including their role.
+     * @description A user can create and read their own profile. Admins can manage all profiles.
+     * @path /userProfiles/{userProfileId}
+     * @allow (get) An authenticated user reads their own profile document. `auth.uid == userProfileId`
+     * @deny (list) A non-admin user tries to list all user profiles in the system.
+     * @principle Restricts access to a user's own data tree and grants full access to administrators.
+     */
+    match /userProfiles/{userProfileId} {
+      allow get: if isSignedIn() && (isOwner(userProfileId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isOwner(userProfileId) && userProfileDataIsConsistent();
+      allow update: if resource != null && (isOwner(userProfileId) || isAdmin()) && roleIsUnchangedOrAdmin();
+      allow delete: if resource != null && isAdmin();
+    }
+
+    /**
+     * This collection is used for Database-Backed Access Control (DBAC).
+     * The existence of a document here identifies a user as an admin.
+     * @description Only existing administrators can read or modify the list of admins.
+     * @path /admin_roles/{adminUid}
+     * @allow (create) An admin adds a new user's UID to this collection to grant them admin privileges.
+     * @deny (get) A non-admin user attempts to check if another user is an admin.
+     * @principle Enforces strict, admin-only control over the authorization mechanism itself.
+     */
+    match /admin_roles/{adminUid} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if resource != null && isAdmin();
+      allow delete: if resource != null && isAdmin();
+    }
+
+    /**
+     * Stores the master list of services offered by the workshop.
+     * @description All authenticated users can read the list of services, but only admins can modify it.
+     * @path /services/{serviceId}
+     * @allow (list) An authenticated mechanic queries the collection to display available services.
+     * @deny (create) A non-admin user attempts to add a new service to the workshop's offerings.
+     * @principle Segregates public-read data from admin-only write operations.
+     */
+    match /services/{serviceId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if resource != null && isAdmin();
+      allow delete: if resource != null && isAdmin();
+    }
+
+    /**
+     * Stores the master list of parts and inventory details.
+     * @description All authenticated users can read part information, but only admins can manage the inventory.
+     * @path /parts/{partId}
+     * @allow (get) An authenticated mechanic looks up the details and stock of a specific part.
+     * @deny (update) A non-admin user attempts to change the price or stock quantity of a part.
+     * @principle Segregates public-read data from admin-only write operations.
+     */
+    match /parts/{partId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if resource != null && isAdmin();
+      allow delete: if resource != null && isAdmin();
+    }
+
+    /**
+     * Stores information about the workshop's customers.
+     * @description Authenticated users can create, read, and update customer records. Deletion is restricted to admins.
+     * @path /customers/{customerId}
+     * @allow (create) An authenticated mechanic adds a new customer to the system.
+     * @deny (delete) A non-admin user tries to delete a customer record.
+     * @principle Allows staff to manage operational data while protecting against accidental historical data loss.
+     */
+    match /customers/{customerId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if resource != null && isSignedIn();
+      allow delete: if resource != null && isAdmin();
+    }
+
+    /**
+     * Contains details about customer vehicles.
+     * @description Authenticated users can manage vehicle records. Deletion is restricted to admins.
+     * @path /vehicles/{vehicleId}
+     * @allow (update) An authenticated mechanic updates a vehicle's license plate information.
+     * @deny (delete) A non-admin user tries to delete a vehicle from the system.
+     * @principle Allows staff to manage operational data while protecting against accidental historical data loss.
+     */
+    match /vehicles/{vehicleId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if resource != null && isSignedIn();
+      allow delete: if resource != null && isAdmin();
+    }
+
+    /**
+     * Represents a service order, the central operational document.
+     * @description Authenticated users can manage service orders. Deletion is restricted to admins.
+     * @path /serviceOrders/{serviceOrderId}
+     * @allow (create) An authenticated mechanic creates a new service order for a customer's vehicle.
+     * @deny (delete) A non-admin user tries to delete a completed service order.
+     * @principle Allows staff to manage operational data while protecting against historical data loss and validating relational integrity.
+     */
+    match /serviceOrders/{serviceOrderId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && creatorIsMechanic();
+      allow update: if resource != null && isSignedIn();
+      allow delete: if resource != null && isAdmin();
+    }
+
+    /**
+     * Records all financial transactions for the workshop.
+     * @description Access to financial data is strictly limited to administrators.
+     * @path /financialTransactions/{transactionId}
+     * @allow (get) An admin retrieves a specific transaction for auditing purposes.
+     * @deny (list) A non-admin user attempts to view the list of financial transactions.
+     * @principle Enforces strict confidentiality for sensitive financial information.
+     */
+    match /financialTransactions/{transactionId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if resource != null && isAdmin();
+      allow delete: if resource != null && isAdmin();
+    }
+  }
+}

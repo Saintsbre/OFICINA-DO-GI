@@ -1,0 +1,464 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile within the Oficina do Gi system, linking to Firebase Authentication and storing user-specific data like role.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "firebaseAuthUid": {
+          "type": "string",
+          "description": "Unique user ID provided by Firebase Authentication. (Relationship: Firebase Auth 1:1 UserProfile)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the user (e.g., 'Breno', 'Gi')."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address associated with the user's account, primarily for identification and communication.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user within the application (e.g., 'admin', 'mechanic')."
+        }
+      },
+      "required": [
+        "id",
+        "firebaseAuthUid",
+        "name",
+        "email",
+        "role"
+      ]
+    },
+    "Service": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Service",
+      "type": "object",
+      "description": "Defines a standard service offered by the workshop, including its name, description, and default price.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Service entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the service (e.g., 'Troca de óleo', 'Revisão Geral')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of what the service entails."
+        },
+        "price": {
+          "type": "number",
+          "description": "The standard selling price for this service."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Indicates if the service is currently active and available for selection."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "price",
+        "isActive"
+      ]
+    },
+    "Part": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Part",
+      "type": "object",
+      "description": "Represents a physical part in the workshop's inventory, including stock levels and pricing.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Part entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the part (e.g., 'Filtro de Óleo', 'Vela de Ignição')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the part."
+        },
+        "sku": {
+          "type": "string",
+          "description": "Stock Keeping Unit, a unique code for inventory management."
+        },
+        "price": {
+          "type": "number",
+          "description": "The standard selling price for this part."
+        },
+        "stockQuantity": {
+          "type": "number",
+          "description": "The current quantity of this part available in stock."
+        },
+        "minStockQuantity": {
+          "type": "number",
+          "description": "The minimum desired quantity in stock before reordering is suggested."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "sku",
+        "price",
+        "stockQuantity",
+        "minStockQuantity"
+      ]
+    },
+    "Customer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Customer",
+      "type": "object",
+      "description": "Stores information about a customer, including contact details and a list of their vehicles.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Customer entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the customer."
+        },
+        "email": {
+          "type": "string",
+          "description": "The customer's email address.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "The customer's primary phone number."
+        },
+        "address": {
+          "type": "string",
+          "description": "The physical address of the customer."
+        },
+        "vehicleIds": {
+          "type": "array",
+          "description": "References to Vehicle entities owned by this customer. (Relationship: Customer 1:N Vehicle)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Vehicle": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vehicle",
+      "type": "object",
+      "description": "Contains details about a specific vehicle, linked to its owner and used for tracking service history.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Vehicle entity."
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Reference to the Customer who owns this vehicle. (Relationship: Customer 1:N Vehicle)"
+        },
+        "plate": {
+          "type": "string",
+          "description": "The license plate number of the vehicle, used for quick lookups."
+        },
+        "brand": {
+          "type": "string",
+          "description": "The brand or manufacturer of the vehicle."
+        },
+        "model": {
+          "type": "string",
+          "description": "The model name of the vehicle."
+        },
+        "year": {
+          "type": "number",
+          "description": "The manufacturing year of the vehicle."
+        },
+        "vin": {
+          "type": "string",
+          "description": "Vehicle Identification Number, a unique serial number used by the automotive industry."
+        }
+      },
+      "required": [
+        "id",
+        "customerId",
+        "plate",
+        "brand",
+        "model",
+        "year"
+      ]
+    },
+    "ServiceOrder": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ServiceOrder",
+      "type": "object",
+      "description": "Represents a single service order for a customer's vehicle, detailing services rendered, parts used, and financial status.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ServiceOrder entity."
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Reference to the Customer for whom this service order was created. (Relationship: Customer 1:N ServiceOrder)"
+        },
+        "vehicleId": {
+          "type": "string",
+          "description": "Reference to the Vehicle associated with this service order. (Relationship: Vehicle 1:N ServiceOrder)"
+        },
+        "mechanicId": {
+          "type": "string",
+          "description": "Reference to the UserProfile of the mechanic responsible for this service order. (Relationship: UserProfile 1:N ServiceOrder)"
+        },
+        "issueDate": {
+          "type": "string",
+          "description": "The date and time when the service order was opened.",
+          "format": "date-time"
+        },
+        "completionDate": {
+          "type": "string",
+          "description": "The date and time when the service order was completed, if applicable.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the service order (e.g., 'open', 'in progress', 'completed', 'cancelled')."
+        },
+        "serviceLineItems": {
+          "type": "array",
+          "description": "A list of services performed as part of this order, including their quantities and prices at the time of the order.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "partLineItems": {
+          "type": "array",
+          "description": "A list of parts used in this order, including their quantities and prices at the time of the order.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The calculated total amount for the entire service order, including all services and parts."
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "The payment status of the service order (e.g., 'pending', 'paid', 'partially paid')."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Any additional notes or specific instructions related to this service order."
+        }
+      },
+      "required": [
+        "id",
+        "customerId",
+        "vehicleId",
+        "mechanicId",
+        "issueDate",
+        "status",
+        "serviceLineItems",
+        "partLineItems",
+        "totalAmount",
+        "paymentStatus"
+      ]
+    },
+    "FinancialTransaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FinancialTransaction",
+      "type": "object",
+      "description": "Records individual financial movements, categorized as income or expense, to track the workshop's finances.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FinancialTransaction entity."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of the financial transaction ('income' or 'expense')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the transaction (e.g., 'Payment for OS #123', 'Purchase of new parts')."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary value of the transaction."
+        },
+        "date": {
+          "type": "string",
+          "description": "The date and time when the transaction occurred.",
+          "format": "date-time"
+        },
+        "relatedServiceOrderId": {
+          "type": "string",
+          "description": "Optional reference to a ServiceOrder if this transaction is directly related to one (e.g., customer payment). (Relationship: ServiceOrder 1:N FinancialTransaction)"
+        },
+        "category": {
+          "type": "string",
+          "description": "A category for the transaction (e.g., 'Sales', 'Parts Purchase', 'Rent', 'Utilities')."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "description",
+        "amount",
+        "date",
+        "category"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/userProfiles/{userProfileId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user details including firebaseAuthUid and role. The userProfileId will typically be the Firebase Auth UID. Includes denormalized 'firebaseAuthUid' for authorization independence, allowing users to access their own profile directly via their UID.",
+          "params": [
+            {
+              "name": "userProfileId",
+              "description": "The unique identifier of the user profile, matching the Firebase Authentication UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/admin_roles/{adminUid}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "A collection used for database-backed access control (DBAC). The existence of a document at '/admin_roles/{adminUid}' indicates that the user identified by 'adminUid' is an administrator. The document itself can be minimal (e.g., an empty object). This structure supports authorization independence by allowing direct existence checks for admin roles.",
+          "params": [
+            {
+              "name": "adminUid",
+              "description": "The Firebase Authentication UID of a user who holds the administrator role."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/services/{serviceId}",
+        "definition": {
+          "entityName": "Service",
+          "schema": {
+            "$ref": "#/backend/entities/Service"
+          },
+          "description": "Master list of standard services offered by the workshop. This collection maintains a homogeneous security posture, where all documents are generally readable by mechanics and managed (CUD) by administrators.",
+          "params": [
+            {
+              "name": "serviceId",
+              "description": "The unique identifier for a specific service."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/parts/{partId}",
+        "definition": {
+          "entityName": "Part",
+          "schema": {
+            "$ref": "#/backend/entities/Part"
+          },
+          "description": "Master list of parts in the workshop's inventory. Similar to services, this collection has a homogeneous security posture, with parts being readable by mechanics and manageable (CUD, especially stock quantity) by administrators or authorized mechanics during service order processing.",
+          "params": [
+            {
+              "name": "partId",
+              "description": "The unique identifier for a specific part."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/customers/{customerId}",
+        "definition": {
+          "entityName": "Customer",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "Stores detailed information about each customer. Access (CUD) is typically granted to mechanics and administrators, allowing for secure listing and management of customer records.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "The unique identifier for a specific customer."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/vehicles/{vehicleId}",
+        "definition": {
+          "entityName": "Vehicle",
+          "schema": {
+            "$ref": "#/backend/entities/Vehicle"
+          },
+          "description": "Contains details about individual vehicles, linked to their owner via 'customerId'. The 'customerId' is included for efficient querying (QAP) and authorization, ensuring that rules can verify ownership or associated permissions during list operations.",
+          "params": [
+            {
+              "name": "vehicleId",
+              "description": "The unique identifier for a specific vehicle."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/serviceOrders/{serviceOrderId}",
+        "definition": {
+          "entityName": "ServiceOrder",
+          "schema": {
+            "$ref": "#/backend/entities/ServiceOrder"
+          },
+          "description": "Represents individual service orders for customers. This document includes denormalized 'customerId', 'vehicleId', and 'mechanicId' directly within the document to enable authorization independence and support QAPs. The 'status' field facilitates explicit state modeling. While 'serviceLineItems' and 'partLineItems' are defined as arrays of strings (IDs), in practice, they would likely contain denormalized details (e.g., price, name) to prevent 'get()' calls when calculating totals or displaying order specifics.",
+          "params": [
+            {
+              "name": "serviceOrderId",
+              "description": "The unique identifier for a specific service order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/financialTransactions/{transactionId}",
+        "definition": {
+          "entityName": "FinancialTransaction",
+          "schema": {
+            "$ref": "#/backend/entities/FinancialTransaction"
+          },
+          "description": "Records all financial movements (income/expense) for the workshop. Includes 'relatedServiceOrderId' for contextual linking, and 'type' and 'category' for easy querying and reporting, supporting QAPs for financial oversight.",
+          "params": [
+            {
+              "name": "transactionId",
+              "description": "The unique identifier for a specific financial transaction."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure prioritizes authorization independence, clear segregation of data by security posture, and efficient query capabilities, adhering strictly to the core design principles. Each top-level collection is designed to encapsulate entities with homogeneous security requirements, simplifying security rules and enabling Query-as-Permission (QAPs).\n\n1.  **Authorization Independence:** This is achieved by ensuring that authorization context is self-contained within each document or readily available via direct lookups, avoiding `get()` calls in security rules. For instance, all authorization-relevant IDs (`customerId`, `vehicleId`, `mechanicId`) are explicitly stored within the `ServiceOrder` document itself. This allows rules to evaluate access based solely on the `request.auth.uid` and the `resource.data` fields, making operations atomic and highly performant. The `admin_roles/{uid}` collection further exemplifies this by providing a direct, independent lookup for administrator status via an `exists()` check, eliminating the need to read a user's full profile to determine their role.\n\n2.  **QAPs (Rules are not Filters):** The structure facilitates secure `list` operations through effective structural segregation and the inclusion of necessary foreign keys and status fields directly within the documents. For example:\n    *   `services` and `parts` collections store master data, universally readable by mechanics and manageable by administrators. All documents within these collections share the same access patterns, making `list` queries inherently secure.\n    *   `customers` and `vehicles` are designed for direct access and can be listed by authorized users (mechanics/admins) without needing rules to filter results that are already beyond their permission.\n    *   `serviceOrders` documents include `customerId`, `vehicleId`, `mechanicId`, and `status`. These fields allow for efficient and secure `list` queries, such as 'list all open service orders for a specific mechanic' (`where('mechanicId', '==', request.auth.uid).where('status', '==', 'open')`), ensuring that the rules can validate the query parameters against the user's permissions, rather than filtering results post-fetch.\n    *   `financialTransactions` includes `relatedServiceOrderId`, `type`, and `category`, supporting secure, targeted queries for financial reporting.\n\n3.  **DBAC (No Custom Claims):** The `admin_roles/{uid}` collection is a dedicated mechanism for database-backed access control. The mere existence of a document at `/admin_roles/{request.auth.uid}` signifies that the authenticated user is an administrator, providing a robust, scalable, and easily debuggable way to manage global roles without relying on Firebase Custom Claims.\n\n4.  **Clarity and Predictability:** Semantic naming conventions are used for all paths and wildcards (e.g., `{serviceOrderId}`, `{customerId}`). The `status` field in `ServiceOrder` provides explicit state modeling. Denormalization of critical IDs and potentially snapshot data (like service/part prices in `ServiceOrder` line items, though defined as IDs in schema) further enhances predictability and reduces the need for costly lookups in both application logic and security rules. This radical consistency ensures the system is easy to understand, maintain, and debug."
+  }
+}
