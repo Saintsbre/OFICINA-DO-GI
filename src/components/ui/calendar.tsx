@@ -15,6 +15,8 @@ function Calendar({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
+  const weekdays = ["D", "S", "T", "Q", "Q", "S", "S"];
+  
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -34,7 +36,7 @@ function Calendar({
         table: "w-full border-collapse space-y-1",
         head_row: "flex",
         head_cell:
-          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
         row: "flex w-full mt-2",
         cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
         day: cn(
@@ -63,8 +65,7 @@ function Calendar({
       }}
       formatters={{
         ...props.formatters,
-        formatWeekdayName: (day, options) => 
-          options?.locale?.localize?.day(day.getDay(), { width: "narrow" }),
+        formatWeekdayName: (day) => weekdays[day.getDay()],
       }}
       {...props}
     />

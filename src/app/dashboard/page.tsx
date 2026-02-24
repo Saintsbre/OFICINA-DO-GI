@@ -5,7 +5,7 @@ import Link from "next/link";
 import { collection, query, orderBy, Timestamp } from "firebase/firestore";
 import { useFirebase, useCollection, useMemoFirebase } from "@/firebase";
 import type { Customer, ServiceOrder, ServiceOrderStatus } from "@/lib/types";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 
@@ -66,9 +66,8 @@ const StatCard = ({ title, value, icon, description, isLoading }: { title: strin
 export default function DashboardPage() {
   const { firestore } = useFirebase();
   const [date, setDate] = useState<DateRange | undefined>(() => {
-    const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const end = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
-    return { from: start, to: end };
+    const now = new Date();
+    return { from: startOfMonth(now), to: endOfMonth(now) };
   });
 
   const customersRef = useMemoFirebase(() => collection(firestore, "customers"), [firestore]);
@@ -125,6 +124,19 @@ export default function DashboardPage() {
     return `de ${from} a ${to}`;
   }
   
+  const setPresetDateRange = (preset: '7' | '15' | '30' | 'month') => {
+    const end = new Date();
+    let start: Date;
+
+    if (preset === 'month') {
+      start = startOfMonth(end);
+      setDate({ from: start, to: endOfMonth(end) });
+    } else {
+      start = subDays(end, Number(preset) - 1);
+      setDate({ from: start, to: end });
+    }
+  }
+
   const recentOrders = serviceOrders?.slice(0, 5) || [];
   
   const isLoading = isLoadingCustomers || isLoadingOrders;
@@ -134,7 +146,17 @@ export default function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="Uma visão geral da sua oficina em tempo real."
-        action={<DateRangePicker date={date} setDate={setDate} />}
+        action={
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPresetDateRange('7')}>Últimos 7 dias</Button>
+                <Button variant="outline" size="sm" onClick={() => setPresetDateRange('15')}>Últimos 15 dias</Button>
+                <Button variant="outline" size="sm" onClick={() => setPresetDateRange('30')}>Últimos 30 dias</Button>
+                <Button variant="outline" size="sm" onClick={() => setPresetDateRange('month')}>Este Mês</Button>
+            </div>
+            <DateRangePicker date={date} setDate={setDate} />
+          </div>
+        }
       />
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
