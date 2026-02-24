@@ -5,8 +5,12 @@ import Link from "next/link";
 import { collection, query, orderBy, Timestamp } from "firebase/firestore";
 import { useFirebase, useCollection, useMemoFirebase } from "@/firebase";
 import type { Customer, ServiceOrder, ServiceOrderStatus } from "@/lib/types";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 
 import { PageHeader } from "@/components/shared/PageHeader";
+import { DateRangePicker } from "@/components/shared/date-range-picker";
 import {
   Card,
   CardContent,
@@ -18,7 +22,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const getStatusVariant = (status?: ServiceOrderStatus) => {
     switch(status) {
@@ -62,7 +65,11 @@ const StatCard = ({ title, value, icon, description, isLoading }: { title: strin
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
-  const [period, setPeriod] = useState<'7' | '15' | '30' | 'month'>('month');
+  const [date, setDate] = useState<DateRange | undefined>(() => {
+    const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const end = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0);
+    return { from: start, to: end };
+  });
 
   const customersRef = useMemoFirebase(() => collection(firestore, "customers"), [firestore]);
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersRef);
@@ -74,30 +81,28 @@ export default function DashboardPage() {
   const { data: serviceOrders, isLoading: isLoadingOrders } = useCollection<ServiceOrder>(serviceOrdersQuery);
   
   const stats = useMemo(() => {
-    const now = new Date();
-    let startDate: Date;
-
-    switch (period) {
-        case '7':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-            break;
-        case '15':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 15);
-            break;
-        case '30':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
-            break;
-        case 'month':
-        default:
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    }
+    const startDate = date?.from;
+    const endDate = date?.to;
       
     const periodProfit = serviceOrders
-      ?.filter(order => 
-        order.status === 'completed' &&
-        order.completionDate &&
-        (order.completionDate as unknown as Timestamp).toDate() >= startDate
-      )
+      ?.filter(order => {
+        if (order.status !== 'completed' || !order.completionDate || !startDate) {
+            return false;
+        }
+        const completionDate = (order.completionDate as unknown as Timestamp).toDate();
+        
+        const startOfDay = new Date(startDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        if (!endDate) {
+            return completionDate >= startOfDay;
+        }
+
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        return completionDate >= startOfDay && completionDate <= endOfDay;
+      })
       .reduce((acc, order) => acc + (order.totalAmount - (order.totalCost || 0)), 0) || 0;
       
     const openOrders = serviceOrders?.filter(order => order.status === 'open' || order.status === 'in progress').length || 0;
@@ -109,41 +114,35 @@ export default function DashboardPage() {
       openOrders,
       customerCount,
     }
-  }, [serviceOrders, customers, period]);
+  }, [serviceOrders, customers, date]);
+  
+  const getPeriodLabel = () => {
+    if (!date?.from) return "no período selecionado";
+    const from = format(date.from, 'dd/MM/yy', { locale: ptBR });
+    if (!date.to) return `a partir de ${from}`;
+    const to = format(date.to, 'dd/MM/yy', { locale: ptBR });
+    if (from === to) return `em ${from}`;
+    return `de ${from} a ${to}`;
+  }
   
   const recentOrders = serviceOrders?.slice(0, 5) || [];
   
   const isLoading = isLoadingCustomers || isLoadingOrders;
-
-  const periodLabels: Record<typeof period, string> = {
-    '7': 'últimos 7 dias',
-    '15': 'últimos 15 dias',
-    '30': 'últimos 30 dias',
-    'month': 'este mês'
-  };
 
   return (
     <div>
       <PageHeader
         title="Dashboard"
         description="Uma visão geral da sua oficina em tempo real."
+        action={<DateRangePicker date={date} setDate={setDate} />}
       />
-      <div className="mb-4">
-        <Tabs defaultValue="month" onValueChange={(value) => setPeriod(value as any)} className="w-full md:w-auto">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 sm:w-auto">
-            <TabsTrigger value="7">7 dias</TabsTrigger>
-            <TabsTrigger value="15">15 dias</TabsTrigger>
-            <TabsTrigger value="30">30 dias</TabsTrigger>
-            <TabsTrigger value="month">Este Mês</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+      
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Lucro Líquido no Período"
           value={stats.periodProfit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-          description={`Receita de OS concluídas (${periodLabels[period]})`}
+          description={`Receita de OS concluídas ${getPeriodLabel()}`}
           isLoading={isLoading}
         />
         <StatCard
