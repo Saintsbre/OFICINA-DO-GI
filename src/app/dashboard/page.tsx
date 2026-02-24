@@ -147,18 +147,17 @@ export default function DashboardPage() {
         title="Dashboard"
         description="Uma visão geral da sua oficina em tempo real."
         action={
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPresetDateRange('7')}>Últimos 7 dias</Button>
-                <Button variant="outline" size="sm" onClick={() => setPresetDateRange('15')}>Últimos 15 dias</Button>
-                <Button variant="outline" size="sm" onClick={() => setPresetDateRange('30')}>Últimos 30 dias</Button>
-                <Button variant="outline" size="sm" onClick={() => setPresetDateRange('month')}>Este Mês</Button>
-            </div>
             <DateRangePicker date={date} setDate={setDate} />
-          </div>
         }
       />
       
+      <div className="flex items-center gap-2 mb-6">
+        <Button variant="outline" size="sm" onClick={() => setPresetDateRange('7')}>Últimos 7 dias</Button>
+        <Button variant="outline" size="sm" onClick={() => setPresetDateRange('15')}>Últimos 15 dias</Button>
+        <Button variant="outline" size="sm" onClick={() => setPresetDateRange('30')}>Últimos 30 dias</Button>
+        <Button variant="outline" size="sm" onClick={() => setPresetDateRange('month')}>Este Mês</Button>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Lucro Líquido no Período"
