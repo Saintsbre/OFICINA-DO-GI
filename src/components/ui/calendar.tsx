@@ -61,6 +61,11 @@ function Calendar({
           <ChevronRight className={cn("h-4 w-4", className)} {...props} />
         ),
       }}
+      formatters={{
+        ...props.formatters,
+        formatWeekdayName: (day, options) => 
+          options?.locale?.localize?.day(day.getDay(), { width: "narrow" }),
+      }}
       {...props}
     />
   )
