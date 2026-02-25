@@ -7,7 +7,9 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace("/setup-admins");
+    // Redirect directly to the main dashboard.
+    // The dashboard layout will handle redirecting to login if not authenticated.
+    router.replace("/dashboard");
   }, [router]);
 
   return (
