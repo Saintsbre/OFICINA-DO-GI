@@ -6,6 +6,8 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { collection, serverTimestamp } from 'firebase/firestore';
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -17,7 +19,11 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
 import { useFirebase, useCollection, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { useToast } from '@/hooks/use-toast';
 import type { Customer, Service, Part, ServiceLineItem, PartLineItem } from '@/lib/types';
@@ -28,6 +34,7 @@ const serviceOrderFormSchema = z.object({
   vehiclePlate: z.string().min(7, "A placa deve ter 7 caracteres.").max(8, "A placa deve ter no máximo 8 caracteres."),
   vehicleModel: z.string().min(2, "Insira o modelo do veículo."),
   notes: z.string().optional(),
+  scheduledDate: z.date().optional(),
 });
 
 type ServiceOrderFormData = z.infer<typeof serviceOrderFormSchema>;
@@ -45,6 +52,8 @@ export default function NovaOrdemPage() {
   const [itemTypeToAdd, setItemTypeToAdd] = useState<'service' | 'part'>('service');
   const [selectedItem, setSelectedItem] = useState<string | undefined>();
   const [partQuantity, setPartQuantity] = useState(1);
+  const [submitAction, setSubmitAction] = useState<'save' | 'schedule'>('save');
+
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(
     useMemoFirebase(() => collection(firestore, "customers"), [firestore])
@@ -119,27 +128,40 @@ export default function NovaOrdemPage() {
     const selectedCustomer = customers?.find(c => c.id === data.customerId);
     if (!selectedCustomer) return;
 
+    const status = submitAction === 'schedule' ? 'scheduled' : 'open';
+
+    if (status === 'scheduled' && !data.scheduledDate) {
+        form.setError("scheduledDate", { type: "manual", message: "Selecione uma data para agendar." });
+        return;
+    }
+
     const orderNumber = `OS-${Date.now().toString().slice(-6)}`;
     const serviceOrdersRef = collection(firestore, "serviceOrders");
 
-    addDocumentNonBlocking(serviceOrdersRef, {
+    const orderData: any = {
       orderNumber,
       customerId: data.customerId,
-      customerName: selectedCustomer.name, // Denormalized
+      customerName: selectedCustomer.name,
       vehiclePlate: data.vehiclePlate,
       vehicleModel: data.vehicleModel,
       mechanicId: user.uid,
       issueDate: serverTimestamp(),
-      status: 'open',
+      status,
       notes: data.notes,
       serviceLineItems,
       partLineItems,
       totalAmount,
       totalCost,
       paymentStatus: 'pending',
-    });
+    };
 
-    toast({ title: 'Sucesso!', description: `Ordem de Serviço ${orderNumber} criada.` });
+    if (status === 'scheduled') {
+      orderData.scheduledDate = data.scheduledDate;
+    }
+
+    addDocumentNonBlocking(serviceOrdersRef, orderData);
+
+    toast({ title: 'Sucesso!', description: `Ordem de Serviço ${orderNumber} ${status === 'scheduled' ? 'agendada' : 'criada'}.` });
     router.push('/dashboard/ordens');
   };
 
@@ -186,6 +208,39 @@ export default function NovaOrdemPage() {
                   <Input id="vehicleModel" placeholder="Ex: Toyota Corolla" {...form.register("vehicleModel")} />
                   {form.formState.errors.vehicleModel && <p className="text-sm text-destructive">{form.formState.errors.vehicleModel.message}</p>}
                 </div>
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="scheduledDate">Data de Chegada (para agendamento)</Label>
+                 <Controller
+                    name="scheduledDate"
+                    control={form.control}
+                    render={({ field }) => (
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value ? format(field.value, "PPP", { locale: ptBR }) : <span>Selecione uma data</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                                locale={ptBR}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    )}
+                />
+                 {form.formState.errors.scheduledDate && <p className="text-sm text-destructive">{form.formState.errors.scheduledDate.message}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notes">Problema Relatado / Observações</Label>
@@ -296,9 +351,27 @@ export default function NovaOrdemPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" size="lg" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Ordem de Serviço'}
-              </Button>
+              <div className="w-full space-y-2">
+                <Button
+                    type="submit"
+                    className="w-full"
+                    size="lg"
+                    onClick={() => setSubmitAction('save')}
+                    disabled={form.formState.isSubmitting}
+                >
+                    {form.formState.isSubmitting && submitAction === 'save' ? 'Salvando...' : 'Salvar como Aberta'}
+                </Button>
+                <Button
+                    type="submit"
+                    variant="secondary"
+                    className="w-full"
+                    size="lg"
+                    onClick={() => setSubmitAction('schedule')}
+                    disabled={form.formState.isSubmitting}
+                >
+                    {form.formState.isSubmitting && submitAction === 'schedule' ? 'Agendando...' : 'Agendar Serviço'}
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         </div>

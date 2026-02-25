@@ -26,18 +26,29 @@ export default function OrdemDetalhePage({ params }: { params: { id: string } })
       case 'completed': return 'default';
       case 'in progress': return 'secondary';
       case 'open': return 'outline';
+      case 'scheduled': return 'secondary';
       case 'cancelled': return 'destructive';
       default: return 'secondary';
     }
   };
 
-  const getStatusLabel = (status?: ServiceOrderStatus) => {
+  const getStatusLabel = (status?: ServiceOrderStatus, date?: any) => {
     const labels: Record<ServiceOrderStatus, string> = {
       open: 'Aberta',
       'in progress': 'Em Andamento',
       completed: 'Concluída',
-      cancelled: 'Cancelada'
+      cancelled: 'Cancelada',
+      scheduled: 'Agendada'
     };
+
+    if (status === 'scheduled' && date) {
+      try {
+        return `Agendada (${new Date(date.seconds * 1000).toLocaleDateString('pt-BR')})`;
+      } catch (e) {
+        return 'Data inválida';
+      }
+    }
+    
     return status ? labels[status] : 'Carregando...';
   }
 
@@ -157,12 +168,18 @@ export default function OrdemDetalhePage({ params }: { params: { id: string } })
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Status</span>
-                <Badge variant={getStatusVariant(order.status)} className="capitalize text-sm">{getStatusLabel(order.status)}</Badge>
+                <Badge variant={getStatusVariant(order.status)} className="capitalize text-sm">{getStatusLabel(order.status, order.scheduledDate)}</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Data de Criação</span>
                 <span>{order.issueDate ? new Date(order.issueDate.seconds * 1000).toLocaleDateString('pt-BR') : 'Não definida'}</span>
               </div>
+              {order.scheduledDate && (
+                <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Data Agendada</span>
+                    <span>{new Date(order.scheduledDate.seconds * 1000).toLocaleDateString('pt-BR')}</span>
+                </div>
+              )}
               {order.notes && (
                 <div>
                     <span className="text-muted-foreground text-sm">Problema Relatado</span>

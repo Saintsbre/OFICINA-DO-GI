@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { collection, query, orderBy, Timestamp } from "firebase/firestore";
-import { useFirebase, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, orderBy, Timestamp, doc, serverTimestamp } from "firebase/firestore";
+import { useFirebase, useCollection, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
 import type { Customer, ServiceOrder, ServiceOrderStatus } from "@/lib/types";
 import { format, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,29 +17,41 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { DollarSign, Wrench, Users } from "lucide-react";
+import { DollarSign, Wrench, Users, CheckCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 const getStatusVariant = (status?: ServiceOrderStatus) => {
     switch(status) {
       case 'completed': return 'default';
       case 'in progress': return 'secondary';
       case 'open': return 'outline';
+      case 'scheduled': return 'secondary';
       case 'cancelled': return 'destructive';
       default: return 'secondary';
     }
 };
 
-const getStatusLabel = (status?: ServiceOrderStatus) => {
+const getStatusLabel = (status?: ServiceOrderStatus, date?: any) => {
     const labels: Record<ServiceOrderStatus, string> = {
       open: 'Aberta',
       'in progress': 'Em Andamento',
       completed: 'Concluída',
-      cancelled: 'Cancelada'
+      cancelled: 'Cancelada',
+      scheduled: 'Agendada'
     };
+    
+    if (status === 'scheduled' && date) {
+      try {
+        return `Agendada (${new Date(date.seconds * 1000).toLocaleDateString('pt-BR')})`;
+      } catch (e) {
+        return 'Data inválida';
+      }
+    }
+    
     return status ? labels[status] : 'Carregando...';
 }
 
@@ -65,6 +77,7 @@ const StatCard = ({ title, value, icon, description, isLoading }: { title: strin
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
+  const { toast } = useToast();
   const [date, setDate] = useState<DateRange | undefined>(() => {
     const now = new Date();
     return { from: startOfMonth(now), to: endOfMonth(now) };
@@ -79,6 +92,18 @@ export default function DashboardPage() {
   );
   const { data: serviceOrders, isLoading: isLoadingOrders } = useCollection<ServiceOrder>(serviceOrdersQuery);
   
+  const handleFinalizeOrder = (order: ServiceOrder) => {
+    const orderRef = doc(firestore, "serviceOrders", order.id);
+    updateDocumentNonBlocking(orderRef, {
+        status: 'completed',
+        completionDate: serverTimestamp()
+    });
+    toast({
+        title: "Ordem finalizada!",
+        description: `A OS #${order.orderNumber} foi marcada como concluída.`
+    });
+  };
+
   const stats = useMemo(() => {
     const startDate = date?.from;
     const endDate = date?.to;
@@ -104,7 +129,7 @@ export default function DashboardPage() {
       })
       .reduce((acc, order) => acc + (order.totalAmount - (order.totalCost || 0)), 0) || 0;
       
-    const openOrders = serviceOrders?.filter(order => order.status === 'open' || order.status === 'in progress').length || 0;
+    const openOrders = serviceOrders?.filter(order => ['open', 'in progress', 'scheduled'].includes(order.status)).length || 0;
     
     const customerCount = customers?.length || 0;
 
@@ -207,13 +232,21 @@ export default function DashboardPage() {
                     <TableCell className="font-medium">{order.orderNumber}</TableCell>
                     <TableCell>{order.customerName}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusVariant(order.status)}>{getStatusLabel(order.status)}</Badge>
+                      <Badge variant={getStatusVariant(order.status)}>{getStatusLabel(order.status, order.scheduledDate)}</Badge>
                     </TableCell>
                     <TableCell className="text-right">{order.totalAmount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
                      <TableCell className="text-right">
-                        <Button asChild variant="ghost" size="sm">
-                            <Link href={`/dashboard/ordens/${order.id}`}>Ver Detalhes</Link>
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                           {order.status !== 'completed' && order.status !== 'cancelled' && (
+                              <Button variant="outline" size="sm" onClick={() => handleFinalizeOrder(order)}>
+                                  <CheckCircle className="mr-2 h-3 w-3" />
+                                  Finalizar
+                              </Button>
+                          )}
+                          <Button asChild variant="ghost" size="sm">
+                              <Link href={`/dashboard/ordens/${order.id}`}>Ver Detalhes</Link>
+                          </Button>
+                        </div>
                     </TableCell>
                   </TableRow>
                 ))

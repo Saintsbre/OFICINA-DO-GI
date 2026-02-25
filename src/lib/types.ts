@@ -45,7 +45,7 @@ export type Vehicle = {
   vin?: string;
 }
 
-export type ServiceOrderStatus = 'open' | 'in progress' | 'completed' | 'cancelled';
+export type ServiceOrderStatus = 'open' | 'in progress' | 'completed' | 'cancelled' | 'scheduled';
 
 export type ServiceLineItem = {
   id: string;
@@ -70,6 +70,7 @@ export type ServiceOrder = {
   vehicleModel: string;
   mechanicId: string;
   issueDate: FieldValue;
+  scheduledDate?: FieldValue;
   completionDate?: FieldValue;
   status: ServiceOrderStatus;
   serviceLineItems: ServiceLineItem[];
